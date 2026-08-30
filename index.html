@@ -46,6 +46,8 @@
   #legend .lg-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; cursor: default; }
   #legend .sw { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; border: 1px solid #00000055; }
   #legend .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #legend .lg-prehist { cursor: pointer; padding: 3px 4px; border-radius: 4px; border: 1px dashed #4a4a3a; }
+  #legend .lg-prehist:active { background: #2a3140; }
 
   /* 详情侧栏 */
   #sidebar {
@@ -78,6 +80,21 @@
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   }
   #erabands { position: relative; height: 18px; margin-bottom: 2px; }
+  /* 覆盖度指示条 */
+  #coverage_wrap { position: relative; height: 14px; margin-bottom: 4px; }
+  #coverage {
+    position: absolute; left: 0; top: 4px; height: 4px; width: 0%;
+    background: linear-gradient(90deg, #3b6ea5, #6ea3d8); border-radius: 2px;
+    transition: width .15s;
+  }
+  #coverage_wrap::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 4px;
+    background: #222a36; border-radius: 2px;
+  }
+  #coverage_txt {
+    position: absolute; left: 0; top: -4px; font-size: 10px; color: #8a93a5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
   .era {
     position: absolute; top: 0; height: 100%; font-size: 11px; color: #98a2b3;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -210,6 +227,10 @@
 </div>
 
 <div id="timeline">
+  <div id="coverage_wrap">
+    <div id="coverage"></div>
+    <span id="coverage_txt"></span>
+  </div>
   <div id="erabands"></div>
   <input type="range" id="slider" min="-2000" max="2000" value="1000" step="1">
   <div id="tlrow">
@@ -387,6 +408,15 @@ function draw() {
     const rec = states.get(provinces[i][0]);
     ctx.fillStyle = stateColor(rec);   // 无记录/字段全空 → 史前土色, 永不空白
     ctx.fill(paths[i], 'evenodd');
+    // 高亮模式: 无记载省份加白色虚线描边
+    if (prehistHighlight && (!rec || (!rec[1] && !rec[2] && !rec[3]))) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2 / s;
+      ctx.setLineDash([4 / s, 3 / s]);
+      ctx.stroke(paths[i]);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.8 / s;
+    }
     if (selected === provinces[i][0]) {
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2 / s;
       ctx.stroke(paths[i]);
@@ -658,6 +688,12 @@ if (isMobileUI()) legendEl.classList.add('collapsed');
 legendEl.querySelector('.lg-title').addEventListener('click', () =>
   legendEl.classList.toggle('collapsed'));
 
+// 高亮/取消高亮所有"无记载"省份(闪烁描边)
+let prehistHighlight = false;
+window.togglePrehist = function () {
+  prehistHighlight = !prehistHighlight;
+  draw();
+};
 function updateLegend() {
   const states = getStates(year);
   // 用与地图涂色完全相同的 resolveState 聚合, 图例=地图所见即所得
@@ -676,9 +712,11 @@ function updateLegend() {
     if (cur) cur[0] += noRec; else counts.set(PREHIST_ID, [noRec, PREHIST_COLOR, '史前 · 无记载']);
   }
   const all = [...counts.values()].sort((a, b) => b[0] - a[0]);
-  document.getElementById('legend_rows').innerHTML = all.map(([n, color, name]) =>
-    `<div class="lg-row"><span class="sw" style="background:${color}"></span><span class="nm" title="${name}">${name}</span><span style="color:#5d6675">${n}</span></div>`
-  ).join('');
+  document.getElementById('legend_rows').innerHTML = all.map(([n, color, name]) => {
+    const isPre = color === PREHIST_COLOR;
+    return `<div class="lg-row${isPre ? ' lg-prehist' : ''}"${isPre ? ' title="点击高亮所有无记载区域"' : ''} onclick="${isPre ? 'togglePrehist()' : ''}">
+      <span class="sw" style="background:${color}"></span><span class="nm" title="${name}">${name}</span><span style="color:#5d6675">${n}</span></div>`;
+  }).join('');
   document.getElementById('legend').querySelector('.lg-title').textContent =
     (mode === 'ruler' ? '政权' : mode === 'culture' ? '文化' : '宗教') + ` · 全部 ${all.length} 项`;
 }
@@ -727,9 +765,29 @@ document.getElementById('mkbtn').onclick = function () {
 
 function updateAll() {
   document.getElementById('yearlabel').textContent = yearStr(year) + ' 年';
+  updateCoverage();
   updateLegend();
   draw();
   if (sidebar.classList.contains('open') && selected) showSidebar(selected);
+}
+
+// ================= 数据覆盖度指示 =================
+// 计算当年有记载(政权/文化/宗教任一非空)的省占比 + 文字说明
+function updateCoverage() {
+  const states = getStates(year);
+  let known = 0;
+  for (const [, rec] of states) if (rec[1] || rec[2] || rec[3]) known++;
+  const pct = Math.round(known / provinces.length * 100);
+  const el = document.getElementById('coverage');
+  if (!el) return;
+  el.style.width = pct + '%';
+  const pctEl = document.getElementById('coverage_txt');
+  if (pctEl) {
+    let note = '';
+    if (year < 0) note = ' · 史前/上古时段全球记载普遍稀缺, 空白=无史料记载, 并非无人居住';
+    else if (pct < 70) note = ' · 部分地区无记载';
+    pctEl.textContent = `史料覆盖 ${pct}%${note}`;
+  }
 }
 
 window.addEventListener('resize', resize);
