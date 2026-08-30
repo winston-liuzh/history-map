@@ -2,12 +2,13 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>历史地球 · Chronas 本地版</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Microsoft YaHei", sans-serif; background: #10141a; color: #e8e6e0; }
 
-  #map { position: absolute; top: 0; left: 0; cursor: grab; }
+  #map { position: absolute; top: 0; left: 0; cursor: grab; touch-action: none; }
   #map.dragging { cursor: grabbing; }
 
   /* 顶栏 */
@@ -89,6 +90,32 @@
   #loading .bar { width: 300px; height: 6px; background: #222a36; border-radius: 3px; overflow: hidden; }
   #loading .bar div { height: 100%; width: 0%; background: #3b6ea5; transition: width .2s; }
   #loading .txt { color: #8a93a5; font-size: 13px; }
+
+  /* ================= 手机适配(窄屏才生效, 电脑不变) ================= */
+  @media (max-width: 700px) {
+    html, body { overscroll-behavior: none; }
+    #topbar { height: 42px; padding: 0 8px; gap: 6px; }
+    #topbar .title { font-size: 13px; letter-spacing: 0; }
+    .modebtn { padding: 4px 9px; font-size: 12px; }
+    #yearlabel { top: 50px; font-size: 24px; }
+    /* 图例: 手机默认折叠, 点标题展开 */
+    #legend { top: 50px; left: 8px; max-width: 150px; padding: 5px 8px; }
+    #legend .lg-title { cursor: pointer; }
+    #legend.collapsed #legend_rows { display: none; }
+    #legend .lg-title::after { content: ' ▸'; color: #5d6675; }
+    #legend:not(.collapsed) .lg-title::after { content: ' ▾'; }
+    /* 侧栏: 全宽浮层 */
+    #sidebar {
+      top: 46px; bottom: 132px; left: 8px; right: 8px; width: auto;
+      border: 1px solid #2a3140; border-radius: 8px;
+    }
+    /* 时间轴: 更紧凑, 朝代带只显部分 */
+    #timeline { height: 124px; padding: 8px 10px 6px; }
+    .era { font-size: 10px; }
+    #tlrow { gap: 8px; }
+    #tlrow .hint { display: none; }
+    #play { padding: 4px 14px; }
+  }
 </style>
 </head>
 <body>
@@ -283,7 +310,8 @@ function drawMarkers(s) {
   const w = 30; // 年份窗口 ±30
   const sc = view.scale;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const vx0 = 0, vy0 = 46, vx1 = canvas.width, vy1 = canvas.height - 110 * (window.devicePixelRatio || 1);
+  const tlH = document.getElementById('timeline').offsetHeight * (canvas.height / innerHeight);
+  const vx0 = 0, vy0 = 46 * (canvas.height / innerHeight), vx1 = canvas.width, vy1 = canvas.height - tlH;
   let drawn = 0;
   ctx.fillStyle = 'rgba(255,220,80,0.85)';
   for (let i = 0; i < markers.length && drawn < 6000; i++) {
@@ -325,11 +353,74 @@ canvas.addEventListener('wheel', e => {
   const dpr = canvas.width / innerWidth;
   const mx = e.clientX * dpr, my = e.clientY * dpr;
   const k = e.deltaY < 0 ? 1.25 : 0.8;
+  zoomAt(mx, my, k);
+}, { passive: false });
+
+// 以屏幕点 (mx,my) 为中心缩放 k 倍
+function zoomAt(mx, my, k) {
   const ns = Math.min(Math.max(view.scale * k, 0.05), 60);
   view.ox = mx - (mx - view.ox) * (ns / view.scale);
   view.oy = my - (my - view.oy) * (ns / view.scale);
   view.scale = ns;
   draw();
+}
+
+// ================= 触屏交互: 拖动 / 双指缩放 / 点按 / 双击放大 =================
+let tStart = null, pinchStart = null, lastTap = 0;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const dpr = canvas.width / innerWidth;
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    tStart = { x: t.clientX, y: t.clientY, ox: view.ox, oy: view.oy, moved: false };
+    pinchStart = null;
+  } else if (e.touches.length === 2) {
+    const [a, b] = e.touches;
+    pinchStart = {
+      dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+      scale: view.scale, ox: view.ox, oy: view.oy,
+      cx: (a.clientX + b.clientX) / 2 * dpr,
+      cy: (a.clientY + b.clientY) / 2 * dpr,
+    };
+    tStart = null;
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const dpr = canvas.width / innerWidth;
+  if (e.touches.length === 1 && tStart) {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - tStart.x) + Math.abs(t.clientY - tStart.y) > 6) tStart.moved = true;
+    if (tStart.moved) {
+      view.ox = tStart.ox + (t.clientX - tStart.x) * dpr;
+      view.oy = tStart.oy + (t.clientY - tStart.y) * dpr;
+      draw();
+    }
+  } else if (e.touches.length === 2 && pinchStart) {
+    const [a, b] = e.touches;
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const ns = Math.min(Math.max(pinchStart.scale * dist / pinchStart.dist, 0.05), 60);
+    // 围绕双指中点缩放, 同时允许双指移动平移
+    view.ox = pinchStart.cx - (pinchStart.cx - pinchStart.ox) * (ns / pinchStart.scale);
+    view.oy = pinchStart.cy - (pinchStart.cy - pinchStart.oy) * (ns / pinchStart.scale);
+    view.scale = ns;
+    draw();
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (tStart && !tStart.moved && e.changedTouches.length === 1) {
+    const t = e.changedTouches[0];
+    const dpr = canvas.width / innerWidth;
+    const now = Date.now();
+    if (now - lastTap < 300) {           // 双击放大
+      zoomAt(t.clientX * dpr, t.clientY * dpr, 1.9);
+    } else {                              // 单击 = 选中
+      click(t.clientX * dpr, t.clientY * dpr);
+    }
+    lastTap = now;
+  }
+  if (e.touches.length === 0) { tStart = null; pinchStart = null; }
 }, { passive: false });
 
 // 命中检测
@@ -431,6 +522,12 @@ function showMarkerInfo(m) {
 window.jumpYear = y => { year = y; document.getElementById('slider').value = y; updateAll(); };
 
 // ================= 图例 =================
+// 手机上默认折叠图例, 点标题切换
+const legendEl = document.getElementById('legend');
+if (matchMedia('(max-width: 700px)').matches) legendEl.classList.add('collapsed');
+legendEl.querySelector('.lg-title').addEventListener('click', () =>
+  legendEl.classList.toggle('collapsed'));
+
 function updateLegend() {
   const states = getStates(year);
   const counts = new Map();
