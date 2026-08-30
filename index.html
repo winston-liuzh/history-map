@@ -31,14 +31,17 @@
     pointer-events: none; z-index: 4; letter-spacing: 2px;
   }
 
-  /* 图例 */
+  /* 图例(全量列表, 可滚动) */
   #legend {
     position: absolute; left: 12px; top: 60px; z-index: 4;
     background: rgba(16,20,26,.85); border: 1px solid #2a3140; border-radius: 8px;
     padding: 10px 12px; max-width: 260px; font-size: 12px;
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     box-shadow: 0 4px 18px rgba(0,0,0,.4);
+    max-height: calc(100% - 200px); overflow-y: auto; overscroll-behavior: contain;
   }
+  #legend::-webkit-scrollbar { width: 6px; }
+  #legend::-webkit-scrollbar-thumb { background: #3a4356; border-radius: 3px; }
   #legend .lg-title { color: #8a93a5; margin-bottom: 6px; font-weight: 500; }
   #legend .lg-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; cursor: default; }
   #legend .sw { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; border: 1px solid #00000055; }
@@ -138,8 +141,7 @@
     padding: 10px 14px;
     border-radius: 12px;
     max-height: 42vh;
-    overflow: hidden;
-    transition: max-height .2s;
+    overflow-y: auto; overscroll-behavior: contain;
   }
   body.is-mobile #legend .lg-title {
     cursor: pointer; user-select: none;
@@ -317,10 +319,32 @@ function getStates(y) {
   statesCache = { year: y, map: m };
   return m;
 }
+// 史前/无记载的统一土色(有归属, 不留空白)
+const PREHIST_COLOR = '#8a8069';
+const PREHIST_ID = '__prehistoric__';
+
+// 降级链: 政权空→用文化涂; 文化空→用宗教涂; 全空→史前色
+// 返回 [id, kind, name] —— 图例/涂色/侧栏共用同一来源, 保证三者一致
+function resolveState(rec) {
+  if (!rec) return [PREHIST_ID, 'none', '史前 · 无记载'];
+  const rul = rec[1], cul = rec[2], rel = rec[3];
+  if (mode === 'ruler') {
+    if (rul) return [rul, 'ruler', entityName('ruler', rul)];
+    if (cul) return [cul, 'culture', entityName('culture', cul) + '(文化)'];
+    if (rel) return [rel, 'religion', entityName('religion', rel) + '(宗教)'];
+  } else if (mode === 'culture') {
+    if (cul) return [cul, 'culture', entityName('culture', cul)];
+    if (rul) return [rul, 'ruler', entityName('ruler', rul) + '(政权)'];
+  } else {
+    if (rel) return [rel, 'religion', entityName('religion', rel)];
+    if (rul) return [rul, 'ruler', entityName('ruler', rul) + '(政权)'];
+  }
+  return [PREHIST_ID, 'none', '史前 · 无记载'];
+}
 function stateColor(rec) {
-  const id = mode === 'ruler' ? rec[1] : mode === 'culture' ? rec[2] : rec[3];
-  if (!id) return null;
-  const e = entities[mode] && entities[mode][id];
+  const [id, kind] = resolveState(rec);
+  if (id === PREHIST_ID) return PREHIST_COLOR;
+  const e = entities[kind] && entities[kind][id];
   return e ? e[1] : hashColor(id);
 }
 function hashColor(s) {
@@ -361,9 +385,7 @@ function draw() {
     const b = bboxes[i];
     if (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1) continue;
     const rec = states.get(provinces[i][0]);
-    let c = null;
-    if (rec) c = stateColor(rec);
-    ctx.fillStyle = c || '#4b5158';
+    ctx.fillStyle = stateColor(rec);   // 无记录/字段全空 → 史前土色, 永不空白
     ctx.fill(paths[i], 'evenodd');
     if (selected === provinces[i][0]) {
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2 / s;
@@ -592,15 +614,15 @@ function showSidebar(prov) {
   document.getElementById('sb_content').innerHTML = `
     <h2>${prov}</h2>
     <div class="sub">公元 ${yearStr(year)} 状态</div>
-    <div class="row"><span class="k">政权</span>${ent(rec[1]) || '—'}</div>
+    <div class="row"><span class="k">政权</span>${rec[1] ? ent(rec[1]) : rec[2] ? cul(rec[2]) + '(按文化)' : '史前 · 无政权记载'}</div>
     <div class="row"><span class="k">文化</span>${cul(rec[2]) || '—'}</div>
     <div class="row"><span class="k">宗教</span>${rel(rec[3]) || '—'}</div>
     <div class="row"><span class="k">首都</span>${rec[4] || '—'}</div>
     <div class="row"><span class="k">人口</span>${rec[5] ? rec[5].toLocaleString() : '—'}</div>
     <div class="sub" style="margin-top:18px">该省历史变迁(点击年份跳转)</div>
-    ${(timeline[prov] || []).map(r =>
+    ${(timeline[prov] || []).filter(r => r[1] || r[2] || r[3]).map(r =>
       `<div class="row" style="cursor:pointer" onclick="jumpYear(${r[0]})">
-        <span class="k" style="color:#6ea3d8">${yearStr(r[0])}</span>${ent(r[1]) || '—'} · ${rel(r[3]) || ''}
+        <span class="k" style="color:#6ea3d8">${yearStr(r[0])}</span>${ent(r[1]) || cul(r[2]) || '—'} · ${rel(r[3]) || ''}
       </div>`).join('') || '<div class="sub">无记录</div>'}
   `;
   sidebar.classList.add('open');
@@ -638,21 +660,27 @@ legendEl.querySelector('.lg-title').addEventListener('click', () =>
 
 function updateLegend() {
   const states = getStates(year);
-  const counts = new Map();
+  // 用与地图涂色完全相同的 resolveState 聚合, 图例=地图所见即所得
+  const counts = new Map();   // key -> [n, color, name]
   for (const [prov, rec] of states) {
-    const id = mode === 'ruler' ? rec[1] : mode === 'culture' ? rec[2] : rec[3];
-    if (!id) continue;
-    counts.set(id, (counts.get(id) || 0) + 1);
+    const [id, kind, name] = resolveState(rec);
+    const color = stateColor(rec);
+    const cur = counts.get(id);
+    if (cur) cur[0]++;
+    else counts.set(id, [1, color, name]);
   }
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
-  document.getElementById('legend_rows').innerHTML = top.map(([id, n]) => {
-    const e = entities[mode] && entities[mode][id];
-    const color = e ? e[1] : hashColor(id);
-    const name = e ? e[0] : id;
-    return `<div class="lg-row"><span class="sw" style="background:${color}"></span><span class="nm" title="${name}">${name}</span><span style="color:#5d6675">${n}</span></div>`;
-  }).join('') || '<div class="lg-row" style="color:#5d6675">该年无数据</div>';
+  // 无时间轴记录的省(极少数)也计入史前条目
+  const noRec = provinces.length - states.size;
+  if (noRec > 0) {
+    const cur = counts.get(PREHIST_ID);
+    if (cur) cur[0] += noRec; else counts.set(PREHIST_ID, [noRec, PREHIST_COLOR, '史前 · 无记载']);
+  }
+  const all = [...counts.values()].sort((a, b) => b[0] - a[0]);
+  document.getElementById('legend_rows').innerHTML = all.map(([n, color, name]) =>
+    `<div class="lg-row"><span class="sw" style="background:${color}"></span><span class="nm" title="${name}">${name}</span><span style="color:#5d6675">${n}</span></div>`
+  ).join('');
   document.getElementById('legend').querySelector('.lg-title').textContent =
-    (mode === 'ruler' ? '政权' : mode === 'culture' ? '文化' : '宗教') + ' · 前 14';
+    (mode === 'ruler' ? '政权' : mode === 'culture' ? '文化' : '宗教') + ` · 全部 ${all.length} 项`;
 }
 
 // ================= 时间轴 UI =================
