@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>历史地球 · Chronas 本地版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Microsoft YaHei", sans-serif; background: #10141a; color: #e8e6e0; }
+
+  #map { position: absolute; top: 0; left: 0; cursor: grab; }
+  #map.dragging { cursor: grabbing; }
+
+  /* 顶栏 */
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 46px;
+    background: rgba(16,20,26,.92); display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; border-bottom: 1px solid #2a3140; z-index: 5;
+  }
+  #topbar .title { font-weight: bold; font-size: 15px; letter-spacing: 1px; }
+  .modebtn {
+    padding: 5px 12px; border: 1px solid #3a4356; background: transparent; color: #aab3c2;
+    border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  .modebtn.on { background: #3b6ea5; color: #fff; border-color: #3b6ea5; }
+  #yearlabel {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    font-size: 34px; font-weight: bold; color: #fff; text-shadow: 0 2px 8px #000;
+    pointer-events: none; z-index: 4; letter-spacing: 2px;
+  }
+
+  /* 图例 */
+  #legend {
+    position: absolute; left: 12px; top: 60px; z-index: 4;
+    background: rgba(16,20,26,.85); border: 1px solid #2a3140; border-radius: 6px;
+    padding: 8px 10px; max-width: 240px; font-size: 12px;
+  }
+  #legend .lg-title { color: #8a93a5; margin-bottom: 6px; }
+  #legend .lg-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: default; }
+  #legend .sw { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; border: 1px solid #00000055; }
+  #legend .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 详情侧栏 */
+  #sidebar {
+    position: absolute; right: 0; top: 46px; bottom: 110px; width: 300px;
+    background: rgba(16,20,26,.94); border-left: 1px solid #2a3140; z-index: 5;
+    padding: 16px; display: none; overflow-y: auto;
+  }
+  #sidebar.open { display: block; }
+  #sidebar h2 { font-size: 18px; margin-bottom: 4px; }
+  #sidebar .sub { color: #8a93a5; font-size: 12px; margin-bottom: 14px; }
+  #sidebar .row { margin: 10px 0; font-size: 13px; }
+  #sidebar .row .k { color: #8a93a5; display: inline-block; width: 52px; }
+  #sidebar .close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: #8a93a5; font-size: 16px; }
+  #sidebar .row a { color: #6ea3d8; text-decoration: none; }
+
+  /* 时间轴 */
+  #timeline {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 110px;
+    background: rgba(16,20,26,.95); border-top: 1px solid #2a3140; z-index: 5;
+    padding: 10px 18px 8px;
+  }
+  #erabands { position: relative; height: 18px; margin-bottom: 2px; }
+  .era {
+    position: absolute; top: 0; height: 100%; font-size: 11px; color: #98a2b3;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    border-right: 1px solid #2a3140; white-space: nowrap;
+  }
+  #slider { width: 100%; cursor: pointer; accent-color: #3b6ea5; }
+  #tlrow { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  #play {
+    padding: 4px 16px; background: #3b6ea5; color: #fff; border: none;
+    border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  #speed { background: #1a2029; color: #aab3c2; border: 1px solid #3a4356; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
+  #tlrow .hint { color: #5d6675; font-size: 11px; margin-left: auto; }
+
+  /* 提示框 */
+  #tooltip {
+    position: absolute; z-index: 6; background: rgba(20,25,33,.95); color: #e8e6e0;
+    border: 1px solid #3a4356; border-radius: 4px; padding: 4px 9px; font-size: 12px;
+    pointer-events: none; display: none; white-space: nowrap;
+  }
+
+  /* 加载遮罩 */
+  #loading {
+    position: absolute; inset: 0; z-index: 20; background: #10141a;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  }
+  #loading .bar { width: 300px; height: 6px; background: #222a36; border-radius: 3px; overflow: hidden; }
+  #loading .bar div { height: 100%; width: 0%; background: #3b6ea5; transition: width .2s; }
+  #loading .txt { color: #8a93a5; font-size: 13px; }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+
+<div id="topbar">
+  <span class="title">历史地球</span>
+  <button class="modebtn on" data-mode="ruler">政权</button>
+  <button class="modebtn" data-mode="culture">文化</button>
+  <button class="modebtn" data-mode="religion">宗教</button>
+  <button class="modebtn" id="mkbtn">标记: 关</button>
+</div>
+<div id="yearlabel">1000 年</div>
+<div id="legend"><div class="lg-title">图例(点击色块显示名称)</div><div id="legend_rows"></div></div>
+
+<div id="sidebar">
+  <span class="close" onclick="sidebar.classList.remove('open')">✕</span>
+  <div id="sb_content"></div>
+</div>
+
+<div id="timeline">
+  <div id="erabands"></div>
+  <input type="range" id="slider" min="-2000" max="2000" value="1000" step="1">
+  <div id="tlrow">
+    <button id="play">播放 ▶</button>
+    <select id="speed">
+      <option value="1">慢速</option>
+      <option value="3" selected>中速</option>
+      <option value="8">快速</option>
+      <option value="25">极速</option>
+    </select>
+    <span class="hint">拖动地图 · 滚轮缩放 · 点击省份查看详情</span>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<div id="loading">
+  <div style="font-size:20px;font-weight:bold;letter-spacing:2px">历史地球</div>
+  <div class="bar"><div id="ld_bar"></div></div>
+  <div class="txt" id="ld_txt">正在加载数据…</div>
+</div>
+
+<script>
+// ================= 全局状态 =================
+let provinces = [];   // [name, [rings...]] -> 见 build 后格式: [name, [[ [x,y]... ]...]]
+let entities = {};    // {ruler/culture/religion: {id: [name, color]}}
+let timeline = {};    // {prov: [[year, ruler, culture, religion, capital, pop], ...]}
+let markers = [];     // [id, name, lon, lat, type, year, end]
+
+let year = 1000, mode = 'ruler', showMarkers = false;
+let statesCache = { year: null, map: null };
+
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+const BASE_W = 4096, BASE_H = 2048;
+let view = { scale: 0.3, ox: 0, oy: 0 };  // 变换: screen = base*scale + o
+let paths = [], bboxes = [];              // 每省 Path2D 与包围盒
+let selected = null, hovered = null;
+
+const ERAS = [
+  [-2000, -221, '上古 · 先秦'], [-221, 220, '秦汉'], [220, 581, '魏晋南北朝'],
+  [581, 907, '隋唐'], [907, 1368, '宋元'], [1368, 1644, '明'],
+  [1644, 1912, '清'], [1912, 2000, '近现代'],
+];
+const TYPE_NAMES = { p:'人物', c:'城市', a:'艺术', m:'遗迹', s:'遗址', e:'事件', r:'宗教人物', at:'建筑', ca:'战役', b:'战役', op:'其他' };
+
+// ================= 数据加载 =================
+async function loadJSON(url, onprog) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + ' ' + r.status);
+  return r.json();
+}
+async function boot() {
+  const steps = ['data/provinces.json', 'data/entities.json', 'data/timeline.json', 'data/markers.json'];
+  const labels = ['省份边界', '实体表', '历史时间轴', '历史标记'];
+  for (let i = 0; i < steps.length; i++) {
+    document.getElementById('ld_txt').textContent = `正在加载 ${labels[i]} …`;
+    document.getElementById('ld_bar').style.width = (i / steps.length * 100) + '%';
+    const d = await loadJSON(steps[i]);
+    if (i === 0) { provinces = d; buildPaths(); }
+    if (i === 1) entities = d;
+    if (i === 2) timeline = d;
+    if (i === 3) markers = d;
+  }
+  document.getElementById('ld_bar').style.width = '100%';
+  fitView();
+  document.getElementById('loading').style.display = 'none';
+  updateAll();
+}
+
+// 投影: 经纬度 -> 基准坐标
+const px = lon => (lon + 180) / 360 * BASE_W;
+const py = lat => (90 - lat) / 180 * BASE_H;
+
+function buildPaths() {
+  for (const [name, rings] of provinces) {
+    const p = new Path2D();
+    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+    for (const ring of rings) {
+      for (let i = 0; i < ring.length; i++) {
+        const x = px(ring[i][0]), y = py(ring[i][1]);
+        if (i === 0) p.moveTo(x, y); else p.lineTo(x, y);
+        if (x < minx) minx = x; if (x > maxx) maxx = x;
+        if (y < miny) miny = y; if (y > maxy) maxy = y;
+      }
+      p.closePath();
+    }
+    paths.push(p);
+    bboxes.push([minx, miny, maxx, maxy]);
+  }
+}
+
+// ================= 年份 -> 各省状态 =================
+function getStates(y) {
+  if (statesCache.year === y) return statesCache.map;
+  const m = new Map();
+  for (const prov in timeline) {
+    const recs = timeline[prov];
+    // 二分找最后一个 year <= y 的记录
+    let lo = 0, hi = recs.length - 1, r = null;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (recs[mid][0] <= y) { r = recs[mid]; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (r) m.set(prov, r);
+  }
+  statesCache = { year: y, map: m };
+  return m;
+}
+function stateColor(rec) {
+  const id = mode === 'ruler' ? rec[1] : mode === 'culture' ? rec[2] : rec[3];
+  if (!id) return null;
+  const e = entities[mode] && entities[mode][id];
+  return e ? e[1] : hashColor(id);
+}
+function hashColor(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xFFFFFF;
+  return '#' + h.toString(16).padStart(6, '0');
+}
+
+// ================= 渲染 =================
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+  canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+  draw();
+}
+function fitView() {
+  const s = Math.min(canvas.width / BASE_W, canvas.height / BASE_H) * 0.98;
+  view.scale = s;
+  view.ox = (canvas.width - BASE_W * s) / 2;
+  view.oy = (canvas.height - BASE_H * s) / 2;
+}
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#0d1f33';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const s = view.scale;
+  ctx.setTransform(s, 0, 0, s, view.ox, view.oy);
+  // 视口范围(基准坐标)
+  const vx0 = -view.ox / s, vy0 = -view.oy / s;
+  const vx1 = (canvas.width - view.ox) / s, vy1 = (canvas.height - view.oy) / s;
+
+  const states = getStates(year);
+  ctx.lineWidth = 0.8 / s;
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+
+  for (let i = 0; i < paths.length; i++) {
+    const b = bboxes[i];
+    if (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1) continue;
+    const rec = states.get(provinces[i][0]);
+    let c = null;
+    if (rec) c = stateColor(rec);
+    ctx.fillStyle = c || '#4b5158';
+    ctx.fill(paths[i], 'evenodd');
+    if (selected === provinces[i][0]) {
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.2 / s;
+      ctx.stroke(paths[i]);
+      ctx.lineWidth = 0.8 / s; ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    } else {
+      ctx.stroke(paths[i]);
+    }
+  }
+
+  // 标记层
+  if (showMarkers) drawMarkers(states, s);
+}
+function drawMarkers(s) {
+  const w = 30; // 年份窗口 ±30
+  const sc = view.scale;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const vx0 = 0, vy0 = 46, vx1 = canvas.width, vy1 = canvas.height - 110 * (window.devicePixelRatio || 1);
+  let drawn = 0;
+  ctx.fillStyle = 'rgba(255,220,80,0.85)';
+  for (let i = 0; i < markers.length && drawn < 6000; i++) {
+    const m = markers[i];
+    const sy0 = m[5], sy1 = (m[6] == null ? m[5] : m[6]);
+    if (sy0 == null) continue;
+    if (year < sy0 - w || year > sy1 + w) continue;
+    const x = px(m[2]) * sc + view.ox, y = py(m[3]) * sc + view.oy;
+    if (x < vx0 || x > vx1 || y < vy0 || y > vy1) continue;
+    ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+    drawn++;
+  }
+}
+
+// ================= 交互: 缩放/平移 =================
+canvas.addEventListener('mousedown', e => {
+  const sx = e.clientX * (canvas.width / innerWidth), sy = e.clientY * (canvas.height / innerHeight);
+  const start = { x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy };
+  let moved = false;
+  const mv = ev => {
+    const dpr = canvas.width / innerWidth;
+    if (Math.abs(ev.clientX - start.x) + Math.abs(ev.clientY - start.y) > 4) moved = true;
+    if (moved) {
+      view.ox = start.ox + (ev.clientX - start.x) * dpr;
+      view.oy = start.oy + (ev.clientY - start.y) * dpr;
+      draw();
+    }
+  };
+  const up = ev => {
+    window.removeEventListener('mousemove', mv);
+    window.removeEventListener('mouseup', up);
+    if (!moved) click(sx, sy);
+  };
+  window.addEventListener('mousemove', mv);
+  window.addEventListener('mouseup', up);
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const dpr = canvas.width / innerWidth;
+  const mx = e.clientX * dpr, my = e.clientY * dpr;
+  const k = e.deltaY < 0 ? 1.25 : 0.8;
+  const ns = Math.min(Math.max(view.scale * k, 0.05), 60);
+  view.ox = mx - (mx - view.ox) * (ns / view.scale);
+  view.oy = my - (my - view.oy) * (ns / view.scale);
+  view.scale = ns;
+  draw();
+}, { passive: false });
+
+// 命中检测
+function hitProvince(bx, by) {
+  for (let i = 0; i < paths.length; i++) {
+    const b = bboxes[i];
+    if (bx < b[0] || bx > b[2] || by < b[1] || by > b[3]) continue;
+    if (pip(provinces[i][1], bx, by)) return provinces[i][0];
+  }
+  return null;
+}
+function pip(rings, x, y) { // 射线法(忽略洞)
+  let inside = false;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = px(ring[i][0]), yi = py(ring[i][1]);
+      const xj = px(ring[j][0]), yj = py(ring[j][1]);
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}
+function click(sx, sy) {
+  const bx = (sx - view.ox) / view.scale, by = (sy - view.oy) / view.scale;
+  const prov = hitProvince(bx, by);
+  if (prov) { selected = prov; showSidebar(prov); draw(); }
+  else if (showMarkers) {
+    // 尝试命中标记点(屏幕 6px)
+    const sc = view.scale;
+    let best = null, bd = 36;
+    for (const m of markers) {
+      const x = px(m[2]) * sc + view.ox, y = py(m[3]) * sc + view.oy;
+      const d = (x - sx) ** 2 + (y - sy) ** 2;
+      if (d < bd) { bd = d; best = m; }
+    }
+    if (best) showMarkerInfo(best);
+  }
+}
+
+// tooltip
+canvas.addEventListener('mousemove', e => {
+  const dpr = canvas.width / innerWidth;
+  const bx = (e.clientX * dpr - view.ox) / view.scale, by = (e.clientY * dpr - view.oy) / view.scale;
+  const prov = hitProvince(bx, by);
+  const tip = document.getElementById('tooltip');
+  if (prov && prov !== hovered) {
+    hovered = prov;
+    const rec = getStates(year).get(prov);
+    let sub = '';
+    if (rec) sub = entityName(mode, mode === 'ruler' ? rec[1] : mode === 'culture' ? rec[2] : rec[3]);
+    tip.textContent = prov + (sub ? ' · ' + sub : '');
+    tip.style.display = 'block';
+  } else if (!prov) { hovered = null; tip.style.display = 'none'; }
+  if (prov) {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+  }
+});
+function entityName(mode, id) {
+  if (!id) return '';
+  const e = entities[mode] && entities[mode][id];
+  return e ? e[0] : id;
+}
+
+// ================= 侧栏 =================
+const sidebar = document.getElementById('sidebar');
+function showSidebar(prov) {
+  const rec = getStates(year).get(prov) || [];
+  const ent = id => entityName('ruler', id);
+  const cul = id => entityName('culture', id);
+  const rel = id => entityName('religion', id);
+  document.getElementById('sb_content').innerHTML = `
+    <h2>${prov}</h2>
+    <div class="sub">公元 ${yearStr(year)} 状态</div>
+    <div class="row"><span class="k">政权</span>${ent(rec[1]) || '—'}</div>
+    <div class="row"><span class="k">文化</span>${cul(rec[2]) || '—'}</div>
+    <div class="row"><span class="k">宗教</span>${rel(rec[3]) || '—'}</div>
+    <div class="row"><span class="k">首都</span>${rec[4] || '—'}</div>
+    <div class="row"><span class="k">人口</span>${rec[5] ? rec[5].toLocaleString() : '—'}</div>
+    <div class="sub" style="margin-top:18px">该省历史变迁(点击年份跳转)</div>
+    ${(timeline[prov] || []).map(r =>
+      `<div class="row" style="cursor:pointer" onclick="jumpYear(${r[0]})">
+        <span class="k" style="color:#6ea3d8">${yearStr(r[0])}</span>${ent(r[1]) || '—'} · ${rel(r[3]) || ''}
+      </div>`).join('') || '<div class="sub">无记录</div>'}
+  `;
+  sidebar.classList.add('open');
+}
+function showMarkerInfo(m) {
+  document.getElementById('sb_content').innerHTML = `
+    <h2>${m[1] || m[0]}</h2>
+    <div class="sub">${TYPE_NAMES[m[4]] || '标记'}</div>
+    <div class="row"><span class="k">坐标</span>${m[2].toFixed(2)}, ${m[3].toFixed(2)}</div>
+    <div class="row"><span class="k">起始</span>${m[5] != null ? yearStr(m[5]) : '—'}</div>
+    <div class="row"><span class="k">结束</span>${m[6] != null ? yearStr(m[6]) : '—'}</div>
+    <div class="row"><a href="https://zh.wikipedia.org/wiki/${encodeURIComponent(m[0])}" target="_blank">维基百科 ↗</a></div>
+  `;
+  sidebar.classList.add('open');
+}
+window.jumpYear = y => { year = y; document.getElementById('slider').value = y; updateAll(); };
+
+// ================= 图例 =================
+function updateLegend() {
+  const states = getStates(year);
+  const counts = new Map();
+  for (const [prov, rec] of states) {
+    const id = mode === 'ruler' ? rec[1] : mode === 'culture' ? rec[2] : rec[3];
+    if (!id) continue;
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  document.getElementById('legend_rows').innerHTML = top.map(([id, n]) => {
+    const e = entities[mode] && entities[mode][id];
+    const color = e ? e[1] : hashColor(id);
+    const name = e ? e[0] : id;
+    return `<div class="lg-row"><span class="sw" style="background:${color}"></span><span class="nm" title="${name}">${name}</span><span style="color:#5d6675">${n}</span></div>`;
+  }).join('') || '<div class="lg-row" style="color:#5d6675">该年无数据</div>';
+  document.getElementById('legend').querySelector('.lg-title').textContent =
+    (mode === 'ruler' ? '政权' : mode === 'culture' ? '文化' : '宗教') + ' · 前 14';
+}
+
+// ================= 时间轴 UI =================
+function yearStr(y) { return y < 0 ? `前 ${-y}` : `${y}`; }
+function buildEraBands() {
+  const el = document.getElementById('erabands');
+  el.innerHTML = ERAS.map(([a, b, name]) => {
+    const l = (a + 2000) / 4000 * 100, w = (b - a) / 4000 * 100;
+    return `<div class="era" style="left:${l}%;width:${w}%">${name}</div>`;
+  }).join('');
+}
+const slider = document.getElementById('slider');
+slider.addEventListener('input', () => { year = +slider.value; updateAll(); });
+
+let playing = false, timer = null;
+document.getElementById('play').onclick = () => {
+  playing = !playing;
+  document.getElementById('play').textContent = playing ? '暂停 ⏸' : '播放 ▶';
+  if (playing) {
+    if (year >= 2000) { year = -2000; slider.value = year; }
+    const speed = +document.getElementById('speed').value;
+    timer = setInterval(() => {
+      year = Math.min(year + speed, 2000);
+      slider.value = year; updateAll();
+      if (year >= 2000) { playing = false; clearInterval(timer); document.getElementById('play').textContent = '播放 ▶'; }
+    }, 80);
+  } else clearInterval(timer);
+};
+
+document.querySelectorAll('.modebtn[data-mode]').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.modebtn[data-mode]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    mode = b.dataset.mode;
+    updateAll();
+  };
+});
+document.getElementById('mkbtn').onclick = function () {
+  showMarkers = !showMarkers;
+  this.textContent = '标记: ' + (showMarkers ? '开' : '关');
+  this.classList.toggle('on', showMarkers);
+  draw();
+};
+
+function updateAll() {
+  document.getElementById('yearlabel').textContent = yearStr(year) + ' 年';
+  updateLegend();
+  draw();
+  if (sidebar.classList.contains('open') && selected) showSidebar(selected);
+}
+
+window.addEventListener('resize', resize);
+buildEraBands();
+resize();
+boot().catch(e => {
+  document.getElementById('ld_txt').textContent =
+    '加载失败: ' + e.message + '(请用 启动.bat 启动, 不要直接双击 html)';
+});
+</script>
+</body>
+</html>
