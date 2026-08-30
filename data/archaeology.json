@@ -1,0 +1,101 @@
+{
+  "comment": "考古文化层配置: 为 Chronas 无记载的史前空白区域填充学界公认的考古学文化。只填充'首条有效记录>=公元1年'的省份, 不覆盖已有数据。region=[西经,东经,南纬,北纬] 按省份质心匹配。end=1 表示延续到公元1年快照接管; end<1 时在该年插入'重置'记录(回归无记载)。",
+  "sources": {
+    "arch": {
+      "name": "考古文化层(学界综述整理)",
+      "desc": "年代为学界近似区间, 范围为近似地理框, 不代表精确边界",
+      "refs": [
+        "各文化年代依据学界主流定年综述(考古学教科书及对应研究综述)",
+        "本层由本项目整理, 非机器可读的官方学术数据库"
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "arch_olmec", "name": "奥尔梅克(Olmec)", "field": "culture", "color": "#8a6d3b",
+      "start": -1400, "end": -400, "region": [-95, -90.5, 16, 21],
+      "note": "中美洲首个复杂文明, 墨西哥湾岸, 学界定年约前1400-前400"
+    },
+    {
+      "id": "arch_maya_pre", "name": "玛雅前古典(Maya Preclassic)", "field": "culture", "color": "#5b8c5a",
+      "start": -1000, "end": 1, "region": [-91.5, -86.5, 15, 21.5],
+      "note": "玛雅低地前古典期村落社会, 约前1000年起"
+    },
+    {
+      "id": "arch_zapotec", "name": "萨波特克(Zapotec)", "field": "culture", "color": "#a86a3f",
+      "start": -700, "end": 1, "region": [-98, -96, 15.5, 18.5],
+      "note": "瓦哈卡谷地, 阿尔班山兴起于约前500"
+    },
+    {
+      "id": "arch_norte_chico", "name": "小北文明(Caral-Supe)", "field": "culture", "color": "#b08968",
+      "start": -2600, "end": -1800, "region": [-78.6, -76.2, -11.2, -9.3],
+      "note": "秘鲁中北部海岸, 美洲最古老的城市文明, 约前2600-前1800"
+    },
+    {
+      "id": "arch_chavin", "name": "查文(Chavín)", "field": "culture", "color": "#9c6644",
+      "start": -900, "end": -200, "region": [-80, -75, -11, -4],
+      "note": "秘鲁高地广域宗教-文化网络, 约前900-前200"
+    },
+    {
+      "id": "arch_paracas", "name": "帕拉卡斯(Paracas)", "field": "culture", "color": "#c17a4f",
+      "start": -800, "end": 1, "region": [-77, -74.5, -16.5, -12.8],
+      "note": "秘鲁南部海岸文化, 约前800-公元100"
+    },
+    {
+      "id": "arch_kush", "name": "库什王国(Kush)", "field": "ruler", "culture_id": "arch_meroitic",
+      "culture_name": "麦罗埃文化(Meroitic)", "color": "#d4a373",
+      "start": -1000, "end": 1, "region": [28, 36, 9, 22],
+      "note": "尼罗河流域努比亚政权(纳帕塔/麦罗埃), 约前1000年起"
+    },
+    {
+      "id": "arch_nok", "name": "诺克文化(Nok)", "field": "culture", "color": "#6b8e23",
+      "start": -1500, "end": 1, "region": [7, 11, 7.5, 11],
+      "note": "尼日利亚乔斯高原, 非洲撒哈拉以南最早的红陶/铁器文化之一, 约前1500-公元1"
+    },
+    {
+      "id": "arch_aborig", "name": "澳洲原住民(Aboriginal)", "field": "culture", "color": "#c1440e",
+      "start": -2000, "end": 1, "region": [112, 155, -45, -10],
+      "note": "澳洲原住民文化连续居住数万年(此处自时间轴起点起)"
+    },
+    {
+      "id": "arch_papuan", "name": "巴布亚文化(Papuan)", "field": "culture", "color": "#b56576",
+      "start": -2000, "end": 1, "region": [130, 151, -11, -0.5],
+      "note": "新几内亚高地与岛屿的巴布亚语各族(农业史逾数千年)"
+    },
+    {
+      "id": "arch_lapita", "name": "拉皮塔文化(Lapita)", "field": "culture", "color": "#2a9d8f",
+      "start": -1500, "end": -500, "region": [160, 190, -25, -10],
+      "note": "美拉尼西亚-西波利尼西亚的南岛语系陶器文化, 约前1500-前500"
+    },
+    {
+      "id": "arch_sahuynh", "name": "沙萤文化(Sa Huỳnh)", "field": "culture", "color": "#f4a261",
+      "start": -1000, "end": 1, "region": [107.5, 110.5, 12, 16.5],
+      "note": "越南中部海岸的铁器时代文化, 约前1000-公元200"
+    },
+    {
+      "id": "arch_banchiang", "name": "班清文化(Ban Chiang)", "field": "culture", "color": "#e9c46a",
+      "start": -2000, "end": 1, "region": [102, 105.5, 15, 19.5],
+      "note": "泰东北青铜-铁器时代文化(定年存争议, 取保守区间)"
+    },
+    {
+      "id": "arch_bantu", "name": "班图扩张(Bantu expansion)", "field": "culture", "color": "#84a98c",
+      "start": -800, "end": 1, "region": [12, 32, -12, 6],
+      "note": "班图语农人自西非向中非/南非扩散的过程(范围为近似示意)"
+    },
+    {
+      "id": "arch_sami", "name": "萨米(Sámi)", "field": "culture", "color": "#6d7f8e",
+      "start": -2000, "end": 1, "region": [18, 32, 60, 71],
+      "note": "北芬诺斯堪的亚的萨米(拉普)族群狩猎-驯鹿文化"
+    },
+    {
+      "id": "arch_poverty", "name": "波弗蒂角(Poverty Point)", "field": "culture", "color": "#6c5b7b",
+      "start": -1650, "end": -700, "region": [-94, -89, 29.5, 33.5],
+      "note": "密西西比下游大型土方建筑文化, 约前1650-前700"
+    },
+    {
+      "id": "arch_adena", "name": "阿迪纳(Adena)", "field": "culture", "color": "#7d5ba6",
+      "start": -800, "end": 1, "region": [-85.5, -80, 37, 41.5],
+      "note": "俄亥俄谷地坟丘文化, 约前800-公元100"
+    }
+  ]
+}

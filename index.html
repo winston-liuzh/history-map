@@ -259,6 +259,7 @@ let provinces = [];   // [name, [rings...]] -> 见 build 后格式: [name, [[ [x
 let entities = {};    // {ruler/culture/religion: {id: [name, color]}}
 let timeline = {};    // {prov: [[year, ruler, culture, religion, capital, pop], ...]}
 let markers = [];     // [id, name, lon, lat, type, year, end]
+let dataSources = {}; // {srcId: {name, type, desc, refs}} — 记录第7位的来源标识
 
 let year = 1000, mode = 'ruler', showMarkers = false;
 let statesCache = { year: null, map: null };
@@ -284,8 +285,8 @@ async function loadJSON(url, onprog) {
   return r.json();
 }
 async function boot() {
-  const steps = ['data/provinces.json', 'data/entities.json', 'data/timeline.json', 'data/markers.json'];
-  const labels = ['省份边界', '实体表', '历史时间轴', '历史标记'];
+  const steps = ['data/provinces.json', 'data/entities.json', 'data/timeline.json', 'data/markers.json', 'data/sources.json'];
+  const labels = ['省份边界', '实体表', '历史时间轴', '历史标记', '数据来源'];
   for (let i = 0; i < steps.length; i++) {
     document.getElementById('ld_txt').textContent = `正在加载 ${labels[i]} …`;
     document.getElementById('ld_bar').style.width = (i / steps.length * 100) + '%';
@@ -294,6 +295,7 @@ async function boot() {
     if (i === 1) entities = d;
     if (i === 2) timeline = d;
     if (i === 3) markers = d;
+    if (i === 4) dataSources = d;
   }
   document.getElementById('ld_bar').style.width = '100%';
   fitView();
@@ -649,6 +651,7 @@ function showSidebar(prov) {
     <div class="row"><span class="k">宗教</span>${rel(rec[3]) || '—'}</div>
     <div class="row"><span class="k">首都</span>${rec[4] || '—'}</div>
     <div class="row"><span class="k">人口</span>${rec[5] ? rec[5].toLocaleString() : '—'}</div>
+    <div class="row"><span class="k">数据来源</span>${srcLabel(rec)}</div>
     <div class="sub" style="margin-top:18px">该省历史变迁(点击年份跳转)</div>
     ${(timeline[prov] || []).filter(r => r[1] || r[2] || r[3]).map(r =>
       `<div class="row" style="cursor:pointer" onclick="jumpYear(${r[0]})">
@@ -763,6 +766,18 @@ document.getElementById('mkbtn').onclick = function () {
   draw();
 };
 
+// 数据来源标识: 记录第7位 = 来源id; 无 = Chronas 原始数据
+function srcLabel(rec) {
+  const sid = rec && rec[6];
+  if (!sid) return 'Chronas / 维基百科';
+  const s = dataSources[sid];
+  if (!s) return sid;
+  // 考古层: 附该层的学界年代区间
+  const culId = rec[2] || rec[1];
+  const layer = s.layers && (s.layers[culId] || (culId === 'arch_meroitic' ? s.layers['arch_kush'] : null));
+  if (layer) return `${s.name}<span style="color:#5d6675;font-size:11px"> · ${layer.name} ${layer.span}</span>`;
+  return s.name;
+}
 function updateAll() {
   document.getElementById('yearlabel').textContent = yearStr(year) + ' 年';
   updateCoverage();
@@ -784,9 +799,8 @@ function updateCoverage() {
   const pctEl = document.getElementById('coverage_txt');
   if (pctEl) {
     let note = '';
-    if (year < 0) note = ' · 史前/上古时段全球记载普遍稀缺, 空白=无史料记载, 并非无人居住';
-    else if (pct < 70) note = ' · 部分地区无记载';
-    pctEl.textContent = `史料覆盖 ${pct}%${note}`;
+    if (pct < 60) note = ' · 空白=无史料记载, 并非无人居住';
+    pctEl.textContent = `数据覆盖 ${pct}%${note}${year < 0 ? ' · 公元前含考古文化层' : ''}`;
   }
 }
 
