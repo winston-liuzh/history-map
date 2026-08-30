@@ -16,49 +16,63 @@
     position: absolute; top: 0; left: 0; right: 0; height: 46px;
     background: rgba(16,20,26,.92); display: flex; align-items: center; gap: 10px;
     padding: 0 14px; border-bottom: 1px solid #2a3140; z-index: 5;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   }
   #topbar .title { font-weight: bold; font-size: 15px; letter-spacing: 1px; }
   .modebtn {
     padding: 5px 12px; border: 1px solid #3a4356; background: transparent; color: #aab3c2;
-    border-radius: 4px; cursor: pointer; font-size: 13px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; transition: .15s;
   }
+  .modebtn:active { transform: scale(.96); }
   .modebtn.on { background: #3b6ea5; color: #fff; border-color: #3b6ea5; }
   #yearlabel {
     position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
-    font-size: 34px; font-weight: bold; color: #fff; text-shadow: 0 2px 8px #000;
+    font-size: 34px; font-weight: bold; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.8);
     pointer-events: none; z-index: 4; letter-spacing: 2px;
   }
 
   /* 图例 */
   #legend {
     position: absolute; left: 12px; top: 60px; z-index: 4;
-    background: rgba(16,20,26,.85); border: 1px solid #2a3140; border-radius: 6px;
-    padding: 8px 10px; max-width: 240px; font-size: 12px;
+    background: rgba(16,20,26,.85); border: 1px solid #2a3140; border-radius: 8px;
+    padding: 10px 12px; max-width: 260px; font-size: 12px;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    box-shadow: 0 4px 18px rgba(0,0,0,.4);
   }
-  #legend .lg-title { color: #8a93a5; margin-bottom: 6px; }
-  #legend .lg-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: default; }
-  #legend .sw { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; border: 1px solid #00000055; }
+  #legend .lg-title { color: #8a93a5; margin-bottom: 6px; font-weight: 500; }
+  #legend .lg-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; cursor: default; }
+  #legend .sw { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; border: 1px solid #00000055; }
   #legend .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* 详情侧栏 */
   #sidebar {
-    position: absolute; right: 0; top: 46px; bottom: 110px; width: 300px;
-    background: rgba(16,20,26,.94); border-left: 1px solid #2a3140; z-index: 5;
-    padding: 16px; display: none; overflow-y: auto;
+    position: absolute; right: 0; top: 46px; bottom: 110px; width: 340px;
+    background: rgba(16,20,26,.94); border-left: 1px solid #2a3140; z-index: 6;
+    padding: 18px; display: none; overflow-y: auto;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: -4px 0 22px rgba(0,0,0,.4);
   }
   #sidebar.open { display: block; }
-  #sidebar h2 { font-size: 18px; margin-bottom: 4px; }
-  #sidebar .sub { color: #8a93a5; font-size: 12px; margin-bottom: 14px; }
-  #sidebar .row { margin: 10px 0; font-size: 13px; }
-  #sidebar .row .k { color: #8a93a5; display: inline-block; width: 52px; }
-  #sidebar .close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: #8a93a5; font-size: 16px; }
+  #sidebar h2 { font-size: 20px; margin-bottom: 4px; }
+  #sidebar .sub { color: #8a93a5; font-size: 12px; margin-bottom: 16px; }
+  #sidebar .row { margin: 10px 0; font-size: 13px; line-height: 1.5; }
+  #sidebar .row .k { color: #8a93a5; display: inline-block; width: 56px; }
+  #sidebar .close {
+    position: absolute; top: 14px; right: 14px; cursor: pointer; color: #8a93a5;
+    font-size: 20px; width: 30px; height: 30px; line-height: 28px; text-align: center;
+    border-radius: 6px;
+  }
+  #sidebar .close:active { background: #2a3140; color: #fff; }
   #sidebar .row a { color: #6ea3d8; text-decoration: none; }
+  #sidebar .row[onclick] { padding: 6px 4px; border-radius: 4px; }
+  #sidebar .row[onclick]:active { background: #2a3140; }
 
   /* 时间轴 */
   #timeline {
     position: absolute; bottom: 0; left: 0; right: 0; height: 110px;
     background: rgba(16,20,26,.95); border-top: 1px solid #2a3140; z-index: 5;
     padding: 10px 18px 8px;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   }
   #erabands { position: relative; height: 18px; margin-bottom: 2px; }
   .era {
@@ -66,13 +80,15 @@
     display: flex; align-items: center; justify-content: center; overflow: hidden;
     border-right: 1px solid #2a3140; white-space: nowrap;
   }
-  #slider { width: 100%; cursor: pointer; accent-color: #3b6ea5; }
+  #slider { width: 100%; cursor: pointer; accent-color: #3b6ea5; height: 22px; }
   #tlrow { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
   #play {
-    padding: 4px 16px; background: #3b6ea5; color: #fff; border: none;
-    border-radius: 4px; cursor: pointer; font-size: 13px;
+    padding: 6px 18px; background: #3b6ea5; color: #fff; border: none;
+    border-radius: 6px; cursor: pointer; font-size: 13px;
+    min-height: 34px;
   }
-  #speed { background: #1a2029; color: #aab3c2; border: 1px solid #3a4356; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
+  #play:active { background: #2e5a8a; }
+  #speed { background: #1a2029; color: #aab3c2; border: 1px solid #3a4356; border-radius: 6px; padding: 6px 8px; font-size: 12px; min-height: 34px; }
   #tlrow .hint { color: #5d6675; font-size: 11px; margin-left: auto; }
 
   /* 提示框 */
@@ -91,35 +107,90 @@
   #loading .bar div { height: 100%; width: 0%; background: #3b6ea5; transition: width .2s; }
   #loading .txt { color: #8a93a5; font-size: 13px; }
 
-  /* ================= 手机适配(窄屏才生效, 电脑不变) ================= */
-  @media (max-width: 700px) {
-    html, body { overscroll-behavior: none; }
-    #topbar { height: 42px; padding: 0 8px; gap: 6px; }
-    #topbar .title { font-size: 13px; letter-spacing: 0; }
-    .modebtn { padding: 4px 9px; font-size: 12px; }
-    #yearlabel { top: 50px; font-size: 24px; }
-    /* 图例: 手机默认折叠, 点标题展开 */
-    #legend { top: 50px; left: 8px; max-width: 150px; padding: 5px 8px; }
-    #legend .lg-title { cursor: pointer; }
-    #legend.collapsed #legend_rows { display: none; }
-    #legend .lg-title::after { content: ' ▸'; color: #5d6675; }
-    #legend:not(.collapsed) .lg-title::after { content: ' ▾'; }
-    /* 侧栏: 全宽浮层 */
-    #sidebar {
-      top: 46px; bottom: 132px; left: 8px; right: 8px; width: auto;
-      border: 1px solid #2a3140; border-radius: 8px;
-    }
-    /* 时间轴: 更紧凑, 朝代带只显部分 */
-    #timeline { height: 124px; padding: 8px 10px 6px; }
-    .era { font-size: 10px; }
-    #tlrow { gap: 8px; }
-    #tlrow .hint { display: none; }
-    #play { padding: 4px 14px; }
+  /* ============= 手机模式: **完全由 body.is-mobile 类驱动**
+     JS 在页面加载时会根据 ① URL ?mobile=1 或 ② 屏幕窄屏 matchMedia 自动加类
+     桌面访问 + 无参数 → 无类 → 完全不受以下规则影响(100% 保持旧样式)  ============= */
+
+  body.is-mobile { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+
+  /* ---- 顶部 ---- */
+  body.is-mobile #topbar {
+    height: calc(52px + env(safe-area-inset-top, 0));
+    padding: 0 10px 0 env(safe-area-inset-left, 10px);
+    gap: 6px; flex-wrap: nowrap;
   }
+  body.is-mobile #topbar .title { font-size: 14px; letter-spacing: 0; flex-shrink: 0; }
+  body.is-mobile .modebtn { padding: 6px 10px; font-size: 12px; min-height: 34px; min-width: 40px; }
+  body.is-mobile #yearlabel {
+    top: calc(60px + env(safe-area-inset-top, 0));
+    font-size: 28px; letter-spacing: 1px;
+    text-shadow: 0 2px 12px rgba(0,0,0,.9);
+  }
+
+  /* ---- 图例: 手机改为底部卡片, 两列 ---- */
+  body.is-mobile #legend {
+    top: auto !important;
+    bottom: 146px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 20px);
+    max-width: 560px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-height: 42vh;
+    overflow: hidden;
+    transition: max-height .2s;
+  }
+  body.is-mobile #legend .lg-title {
+    cursor: pointer; user-select: none;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 4px; border-bottom: 1px solid #2a3140; margin-bottom: 6px;
+  }
+  body.is-mobile #legend:not(.collapsed) .lg-title::after { content: '收起 ▴'; color: #6ea3d8; font-size: 11px; font-weight: 400; }
+  body.is-mobile #legend.collapsed .lg-title::after { content: '展开 ▸'; color: #6ea3d8; font-size: 11px; font-weight: 400; }
+  body.is-mobile #legend.collapsed #legend_rows { display: none; }
+  body.is-mobile #legend_rows { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+  body.is-mobile #legend .lg-row { margin: 3px 0; font-size: 13px; }
+  body.is-mobile #legend .sw { width: 12px; height: 12px; }
+
+  /* ---- 详情: 底部抽屉(bottom-sheet) ---- */
+  body.is-mobile #sidebar {
+    left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+    width: 100% !important; max-height: 70vh; height: auto;
+    padding: 20px 18px calc(14px + env(safe-area-inset-bottom, 0)) !important;
+    border-radius: 16px 16px 0 0; border-left: none; border-top: 1px solid #2a3140;
+    box-shadow: 0 -6px 30px rgba(0,0,0,.6);
+    z-index: 15; display: none;
+    animation: sheetUp .25s ease-out forwards;
+  }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  body.is-mobile #sidebar.open { display: block; }
+  body.is-mobile #sidebar h2 { font-size: 22px; padding-right: 30px; }
+  body.is-mobile #sidebar .row { font-size: 15px; margin: 12px 0; min-height: 40px; line-height: 1.6; }
+  body.is-mobile #sidebar .row .k { width: 64px; }
+  body.is-mobile #sidebar .close { top: 18px; right: 18px; width: 36px; height: 36px; line-height: 34px; font-size: 22px; }
+  /* 抽屉遮罩 */
+  #sheet-mask { display: none; position: absolute; inset: 0; background: rgba(0,0,0,.45); z-index: 14; }
+  body.is-mobile #sheet-mask.show { display: block; }
+
+  /* ---- 时间轴 ---- */
+  body.is-mobile #timeline {
+    height: auto !important;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 8px));
+  }
+  body.is-mobile #erabands { height: 20px; }
+  body.is-mobile .era { font-size: 10px; }
+  body.is-mobile #slider { height: 28px; }
+  body.is-mobile #tlrow { gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  body.is-mobile #play { min-height: 40px; padding: 0 18px; font-size: 14px; flex-shrink: 0; }
+  body.is-mobile #speed { min-height: 40px; padding: 0 10px; font-size: 13px; flex-shrink: 0; }
+  body.is-mobile #tlrow .hint { display: none; }
+  body.is-mobile #loading .bar { width: 80vw; max-width: 360px; }
 </style>
 </head>
 <body>
 <canvas id="map"></canvas>
+<div id="sheet-mask"></div>
 
 <div id="topbar">
   <span class="title">历史地球</span>
@@ -313,7 +384,10 @@ function drawMarkers(s) {
   const tlH = document.getElementById('timeline').offsetHeight * (canvas.height / innerHeight);
   const vx0 = 0, vy0 = 46 * (canvas.height / innerHeight), vx1 = canvas.width, vy1 = canvas.height - tlH;
   let drawn = 0;
-  ctx.fillStyle = 'rgba(255,220,80,0.85)';
+  const mobile = isMobileUI();
+  const dot = mobile ? 5 : 3;
+  ctx.fillStyle = 'rgba(255,220,80,0.9)';
+  if (mobile) ctx.shadowColor = 'rgba(255,220,80,0.6)', ctx.shadowBlur = 6;
   for (let i = 0; i < markers.length && drawn < 6000; i++) {
     const m = markers[i];
     const sy0 = m[5], sy1 = (m[6] == null ? m[5] : m[6]);
@@ -321,9 +395,10 @@ function drawMarkers(s) {
     if (year < sy0 - w || year > sy1 + w) continue;
     const x = px(m[2]) * sc + view.ox, y = py(m[3]) * sc + view.oy;
     if (x < vx0 || x > vx1 || y < vy0 || y > vy1) continue;
-    ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+    ctx.fillRect(x - dot / 2, y - dot / 2, dot, dot);
     drawn++;
   }
+  ctx.shadowBlur = 0;
 }
 
 // ================= 交互: 缩放/平移 =================
@@ -448,9 +523,10 @@ function click(sx, sy) {
   const prov = hitProvince(bx, by);
   if (prov) { selected = prov; showSidebar(prov); draw(); }
   else if (showMarkers) {
-    // 尝试命中标记点(屏幕 6px)
+    // 尝试命中标记点(手机:±9px; 桌面:±6px)
     const sc = view.scale;
-    let best = null, bd = 36;
+    const r = isMobileUI() ? 9 : 6;
+    let best = null, bd = r * r;
     for (const m of markers) {
       const x = px(m[2]) * sc + view.ox, y = py(m[3]) * sc + view.oy;
       const d = (x - sx) ** 2 + (y - sy) ** 2;
@@ -460,8 +536,28 @@ function click(sx, sy) {
   }
 }
 
+// ================= URL 参数: ?mobile=1 强制手机 / ?desktop=1 强制桌面 =================
+(function applyMobileMode() {
+  const p = new URL(location.href).searchParams;
+  const mq = matchMedia('(max-width: 700px)');
+  // desktop=1 无条件禁用手机模式；mobile=1 无条件启用；否则跟随 matchMedia
+  const calc = () => {
+    if (p.get('desktop') === '1') return false;
+    if (p.get('mobile') === '1' || p.get('m') === '1') return true;
+    return mq.matches;
+  };
+  if (calc()) document.body.classList.add('is-mobile');
+  // 浏览器尺寸变化时, 自动跟随 (除非用户显式指定了参数)
+  mq.addEventListener && mq.addEventListener('change', () => {
+    if (p.get('desktop') === '1' || p.get('mobile') === '1' || p.get('m') === '1') return;
+    document.body.classList.toggle('is-mobile', mq.matches);
+  });
+})();
+function isMobileUI() { return document.body.classList.contains('is-mobile'); }
+
 // tooltip
 canvas.addEventListener('mousemove', e => {
+  if (isMobileUI()) return;   // 手机端无鼠标, 跳过 tooltip 逻辑
   const dpr = canvas.width / innerWidth;
   const bx = (e.clientX * dpr - view.ox) / view.scale, by = (e.clientY * dpr - view.oy) / view.scale;
   const prov = hitProvince(bx, by);
@@ -485,8 +581,9 @@ function entityName(mode, id) {
   return e ? e[0] : id;
 }
 
-// ================= 侧栏 =================
+// ================= 侧栏(抽屉) + 遮罩 =================
 const sidebar = document.getElementById('sidebar');
+const maskEl = document.getElementById('sheet-mask');
 function showSidebar(prov) {
   const rec = getStates(year).get(prov) || [];
   const ent = id => entityName('ruler', id);
@@ -507,6 +604,7 @@ function showSidebar(prov) {
       </div>`).join('') || '<div class="sub">无记录</div>'}
   `;
   sidebar.classList.add('open');
+  if (isMobileUI()) maskEl.classList.add('show');
 }
 function showMarkerInfo(m) {
   document.getElementById('sb_content').innerHTML = `
@@ -518,13 +616,23 @@ function showMarkerInfo(m) {
     <div class="row"><a href="https://zh.wikipedia.org/wiki/${encodeURIComponent(m[0])}" target="_blank">维基百科 ↗</a></div>
   `;
   sidebar.classList.add('open');
+  if (isMobileUI()) maskEl.classList.add('show');
 }
-window.jumpYear = y => { year = y; document.getElementById('slider').value = y; updateAll(); };
+// 点击 ✕ 关闭 / 点遮罩关闭
+document.getElementById('sb_content').parentElement.querySelector('.close').addEventListener('click', closeSidebar);
+maskEl.addEventListener('click', closeSidebar);
+function closeSidebar() { sidebar.classList.remove('open'); maskEl.classList.remove('show'); }
+// 关闭按钮原先用 onclick 内联, 现在双重保险
+sidebar.querySelector('.close').onclick = closeSidebar;
 
-// ================= 图例 =================
-// 手机上默认折叠图例, 点标题切换
+window.jumpYear = y => {
+  year = y; document.getElementById('slider').value = y; updateAll();
+  if (isMobileUI()) { closeSidebar(); } // 跳转后自动关抽屉, 看地图变化
+};
+
+// ================= 图例: 手机端默认折叠 + 两列展示 =================
 const legendEl = document.getElementById('legend');
-if (matchMedia('(max-width: 700px)').matches) legendEl.classList.add('collapsed');
+if (isMobileUI()) legendEl.classList.add('collapsed');
 legendEl.querySelector('.lg-title').addEventListener('click', () =>
   legendEl.classList.toggle('collapsed'));
 
